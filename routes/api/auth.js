@@ -6,15 +6,16 @@ const jwt = require('jsonwebtoken');
 const config = require('config');
 const { check, validationResult } = require('express-validator');
 
-// user model
+//bring in the user model
 const User = require('../../models/User')
 
 // @route   GET api/auth
 // @desc    test route
 // @access  public
-
+//this route is protected just by adding the auth variable (our middleware)
 router.get('/', auth, async (req, res) => {
 try {
+    
     const user = await User.findById(req.user.id).select('-password');
     res.json(user);
 } catch(err) {
@@ -26,6 +27,7 @@ try {
 // @route   POST api/auth
 // @desc    Authenticate user and get token
 // @access  public
+//because of express-validator, brackets are placed after the route with parameter to check for valid email/password and send error message
 router.post('/',
     [
         check('email', 'please include a valid email')
@@ -42,45 +44,34 @@ router.post('/',
     const { email, password } = req.body;
     
     try {
-    
     let user = await User.findOne({ email });
-    
     if(!user) {
         return res
         .status(400)
         .json({ errors: [ { msg: 'invalid credentials' }]});
     };
-
-
     const payload = {
         user: {
             
             id: user.id
         }
     };
-
-
     const isMatch = await bcrypt.compare(password, user.password);
-
     if(!isMatch) {
         return res
         .status(400)
         .json({ errors: [ { msg: 'invalid credentials' }]});
     };
-
-     //pass the payload, secret, expiration and get the token (if no error)
     jwt.sign(
         payload, 
         config.get('jwtSecret'),
         { expiresIn: 3600000 },
         (err, token) => {
             if (err) throw err;
-             //send the token back to the client - will send it in the header to access protected routes (connected to user id)
             return res.json({ token });
-    });
-
+        });
     } catch(err) {
-        //if somethin goes wrong...
+        //if something goes wrong
         console.log(err.message);
         res.status(500).send('server error');
     };
