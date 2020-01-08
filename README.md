@@ -1,3 +1,4 @@
 # mern-authentication
 
-npm run server
+npm run server same command in server
+
